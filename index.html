@@ -156,10 +156,10 @@
     <div class="loading-bar"></div>
   </div>
 
-  <!-- Tombol Interaktif Animasi untuk Pindah ke Link Alternatif -->
+  <!-- Tombol Interaktif Animasi (Akan otomatis disembunyikan jika sudah di jalur alternatif) -->
   <button class="fallback-btn" id="switchLinkBtn" onclick="switchToAlternative()" title="Ganti Link Jika Error">
     <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-    <span>Buka Jalur Alternatif</span>
+    <span id="btn-text">Buka Jalur Alternatif</span>
   </button>
 
   <iframe
@@ -189,23 +189,38 @@
     document.getElementById('greeting-text').innerText = greeting;
     document.getElementById('subtitle-text').innerText = subMessage;
 
-    // --- INISIALISASI APLIKASI & SISTEM SWITCH LINK ---
+    // --- INISIALISASI APLIKASI & SISTEM SWITCH LINK OTOMATIS ---
     const primaryUrl = "https://script.google.com/macros/s/AKfycbz3tGGTqU-cYtCewUHPN4rdK7TYPTdRRE2VBPqUsIFBJ8LI3S5KospcLKGyolr5WRVl/exec";
     const workspaceUrl = "https://script.google.com/a/~/macros/s/AKfycbz3tGGTqU-cYtCewUHPN4rdK7TYPTdRRE2VBPqUsIFBJ8LI3S5KospcLKGyolr5WRVl/exec";
 
     const iframe = document.getElementById('app');
     const loader = document.getElementById('loader');
+    const switchBtn = document.getElementById('switchLinkBtn');
+    const btnText = document.getElementById('btn-text');
 
-    // Cek apakah memori HP sudah pernah diset ke alternatif
+    // Cek memori perangkat apakah sebelumnya sudah diset ke alternatif
     const useAlternative = localStorage.getItem('d_saku_use_alt') === 'true';
     let currentUrl = useAlternative ? workspaceUrl : primaryUrl;
     
     iframe.src = currentUrl;
 
-    // Fungsi tombol interaktif untuk pindah jalur
+    // Pengaturan Tampilan Tombol Berdasarkan Status Link Saat Ini
+    if (useAlternative) {
+      // Jika sudah di jalur alternatif, sembunyikan tombol agar bersih di form login
+      switchBtn.style.display = 'none';
+    } else {
+      // Jika masih di link utama, tampilkan tombol dengan opsi kembali ke utama/alternatif
+      switchBtn.style.display = 'flex';
+      btnText.innerText = "Buka Jalur Alternatif";
+    }
+
+    // Fungsi tombol interaktif untuk pindah jalur dan menyimpan memori permanen
     function switchToAlternative() {
       const targetUrl = (iframe.src === primaryUrl) ? workspaceUrl : primaryUrl;
-      localStorage.setItem('d_saku_use_alt', targetUrl === workspaceUrl ? 'true' : 'false');
+      const isAlt = (targetUrl === workspaceUrl);
+      
+      // Simpan status ke memori perangkat secara permanen
+      localStorage.setItem('d_saku_use_alt', isAlt ? 'true' : 'false');
       
       // Munculkan kembali loader sebentar agar transisi mulus
       loader.style.display = 'flex';
@@ -215,7 +230,13 @@
         iframe.src = targetUrl;
         setTimeout(() => {
           loader.style.opacity = '0';
-          setTimeout(() => { loader.style.display = 'none'; }, 600);
+          setTimeout(() => { 
+            loader.style.display = 'none'; 
+            // Sembunyikan tombol setelah beralih ke alternatif
+            if (isAlt) {
+              switchBtn.style.display = 'none';
+            }
+          }, 600);
         }, 1000);
       }, 500);
     }
