@@ -28,7 +28,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Jarak bawah diperbesar sedikit agar teks turun dan tidak menutupi efek */
       margin-bottom: 50px; 
     }
 
@@ -145,31 +144,48 @@
     document.getElementById('greeting-text').innerText = greeting;
     document.getElementById('subtitle-text').innerText = subMessage;
 
-    // --- INISIALISASI APLIKASI DENGAN OTOMATIS FALLBACK ---
+    // --- INISIALISASI APLIKASI DENGAN DETEKSI ERROR CERDAS ---
     const primaryUrl = "https://script.google.com/macros/s/AKfycbxz23VOnyoUolC-pIRI6HmwILkG1vjwTs9rNOznl7WfiLxxqvazjZu7YlfiaETofDZ6/exec";
     const workspaceUrl = "https://script.google.com/a/~/macros/s/AKfycbxz23VOnyoUolC-pIRI6HmwILkG1vjwTs9rNOznl7WfiLxxqvazjZu7YlfiaETofDZ6/exec";
 
     const iframe = document.getElementById('app');
     const loader = document.getElementById('loader');
 
-    // Cek apakah sebelumnya sudah pernah gagal dan dialihkan ke workspace
+    // Fungsi untuk memuat URL ke iframe
+    function loadApp(url) {
+      iframe.src = url;
+    }
+
+    // Cek status penyimpanan apakah sebelumnya sudah terpaksa pakai alternatif
     const useAlternative = localStorage.getItem('d_saku_use_alt') === 'true';
-    let currentUrl = useAlternative ? workspaceUrl : primaryUrl;
-    
-    iframe.src = currentUrl;
 
-    // Jika menggunakan link utama, kita pasang pengaman (fallback otomatis jika gagal/error)
-    if (!useAlternative) {
-      var fallbackTimer = setTimeout(() => {
-        // Jika dalam waktu 6 detik iframe belum merespons/gagal, pindah ke workspaceUrl
-        console.log("Link utama lambat/gagal, beralih otomatis ke workspace...");
-        localStorage.setItem('d_saku_use_alt', 'true');
-        iframe.src = workspaceUrl;
-      }, 6000); // Waktu tunggu 6 detik
+    if (useAlternative) {
+      loadApp(workspaceUrl);
+    } else {
+      // Cek koneksi/respons link utama terlebih dahulu menggunakan fetch
+      fetch(primaryUrl, { method: 'GET', mode: 'no-cors' })
+        .then(() => {
+          // Jika request berhasil dikirim, muat link utama
+          loadApp(primaryUrl);
+        })
+        .catch(() => {
+          // Jika terjadi error jaringan/akses, langsung pindah ke link alternatif (workspace)
+          console.log("Link utama error/gagal diakses, beralih ke workspace...");
+          localStorage.setItem('d_saku_use_alt', 'true');
+          loadApp(workspaceUrl);
+        });
 
-      // Jika iframe berhasil memuat, batalkan timer fallback
+      // Pengaman tambahan (Timeout 5 detik jika fetch menggantung)
+      var safetyTimer = setTimeout(() => {
+        if (!iframe.src || iframe.src === "about:blank") {
+          console.log("Waktu tunggu habis, beralih ke workspace...");
+          localStorage.setItem('d_saku_use_alt', 'true');
+          loadApp(workspaceUrl);
+        }
+      }, 5000);
+
       iframe.onload = function() {
-        clearTimeout(fallbackTimer);
+        clearTimeout(safetyTimer);
       };
     }
 
